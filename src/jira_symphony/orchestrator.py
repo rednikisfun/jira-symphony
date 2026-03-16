@@ -330,7 +330,7 @@ class Orchestrator:
             )
             return
 
-        summary_snippet = w.output[:500] if w.output else ""
+        summary_snippet = w.output[:2000] if w.output else ""
         await self.jira.add_comment(
             w.issue_key,
             tpl.completion.format(pr_url=pr_url, summary=summary_snippet),
