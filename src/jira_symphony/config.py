@@ -85,12 +85,20 @@ class ProjectEntry(BaseModel):
     extra_dirs: list[str] = Field(default_factory=list)
 
 
+class CommentsConfig(BaseModel):
+    completion: str = "MR: {pr_url}\n\n{summary}"
+    push_failed: str = "Failed to push branch `{branch}`"
+    pr_failed: str = "Branch `{branch}` pushed but PR/MR creation failed."
+    all_attempts_failed: str = "All {max_attempts} attempts failed.\nError: {error}"
+
+
 class SymphonyConfig(BaseModel):
     jira: JiraConfig
     claude: ClaudeConfig = Field(default_factory=ClaudeConfig)
     routing: RoutingConfig = Field(default_factory=RoutingConfig)
     github: GitHubConfig = Field(default_factory=GitHubConfig)
     gitlab: GitLabConfig = Field(default_factory=GitLabConfig)
+    comments: CommentsConfig = Field(default_factory=CommentsConfig)
     projects: list[ProjectEntry] = Field(default_factory=list)
 
     def get_project(self, key: str) -> ProjectConfig | None:

@@ -298,10 +298,12 @@ class Orchestrator:
         if not project:
             return
 
+        tpl = self.config.comments
         pushed = await push_branch(project.path, w.branch_name)
         if not pushed:
             await self.jira.add_comment(
-                w.issue_key, f"Symphony: failed to push branch `{w.branch_name}`"
+                w.issue_key,
+                tpl.push_failed.format(branch=w.branch_name),
             )
             return
 
@@ -324,14 +326,14 @@ class Orchestrator:
             log.exception("%s: PR/MR creation failed", w.issue_key)
             await self.jira.add_comment(
                 w.issue_key,
-                f"Symphony: branch `{w.branch_name}` pushed but PR/MR creation failed.",
+                tpl.pr_failed.format(branch=w.branch_name),
             )
             return
 
-        summary_snippet = w.output[:500] if w.output else "No summary available."
+        summary_snippet = w.output[:500] if w.output else ""
         await self.jira.add_comment(
             w.issue_key,
-            f"Symphony completed.\n\nPR/MR: {pr_url}\n\nSummary:\n{summary_snippet}",
+            tpl.completion.format(pr_url=pr_url, summary=summary_snippet),
         )
 
         await self.jira.transition_issue(
@@ -368,8 +370,9 @@ class Orchestrator:
             log.error("%s: max retries reached", w.issue_key)
             await self.jira.add_comment(
                 w.issue_key,
-                f"Symphony: all {max_attempts} attempts failed.\n"
-                f"Last error: {w.error[:500]}",
+                self.config.comments.all_attempts_failed.format(
+                    max_attempts=max_attempts, error=w.error[:500],
+                ),
             )
             await self.jira.transition_issue(
                 w.issue_key, self.config.jira.transitions.to_do
