@@ -185,6 +185,7 @@ class Orchestrator:
                 "session_id": w.session_id,
                 "output": w.output[:500] if w.output else "",
                 "error": w.error[:500] if w.error else "",
+                "pr_url": w.pr_url,
             }
             for w in all_workers
         ]
@@ -329,6 +330,9 @@ class Orchestrator:
                 tpl.pr_failed.format(branch=w.branch_name),
             )
             return
+
+        w.pr_url = pr_url
+        await self.state.upsert_worker(w)
 
         summary_snippet = w.output[:2000] if w.output else ""
         await self.jira.add_comment(

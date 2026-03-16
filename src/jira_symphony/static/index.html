@@ -348,7 +348,7 @@ async function loadHistory() {
   const table = document.createElement('table');
   table.className = 'history-table';
   const headRow = document.createElement('tr');
-  ['Issue', 'Project', 'Status', 'Attempt', 'Started', 'Finished', 'Actions'].forEach(h => {
+  ['Issue', 'Project', 'Status', 'Attempt', 'Started', 'MR', 'Actions'].forEach(h => {
     const th = document.createElement('th');
     th.textContent = h;
     headRow.appendChild(th);
@@ -360,13 +360,25 @@ async function loadHistory() {
     const cells = [
       w.issue, w.project, null, String(w.attempt),
       w.started_at ? new Date(w.started_at).toLocaleString() : '\u2014',
-      w.finished_at ? new Date(w.finished_at).toLocaleString() : '\u2014',
+      null,
       null,
     ];
     cells.forEach((val, i) => {
       const td = document.createElement('td');
       if (i === 0) { const b = document.createElement('strong'); b.textContent = val; td.appendChild(b); }
       else if (i === 2) { const s = document.createElement('span'); s.className = 'badge ' + w.status; s.textContent = w.status; td.appendChild(s); }
+      else if (i === 5) {
+        if (w.pr_url) {
+          const a = document.createElement('a');
+          a.href = w.pr_url;
+          a.target = '_blank';
+          a.className = 'rc-link';
+          a.textContent = 'MR';
+          td.appendChild(a);
+        } else {
+          td.textContent = '\u2014';
+        }
+      }
       else if (i === 6) {
         const btn = document.createElement('button');
         btn.textContent = 'Retry';

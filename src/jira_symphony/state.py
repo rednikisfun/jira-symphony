@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS workers (
     started_at TEXT,
     finished_at TEXT,
     output TEXT DEFAULT '',
-    error TEXT DEFAULT ''
+    error TEXT DEFAULT '',
+    pr_url TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS manual_queue (
@@ -52,6 +53,12 @@ class StateStore:
         Path(self._db_path).parent.mkdir(parents=True, exist_ok=True)
         self._db = await aiosqlite.connect(self._db_path)
         await self._db.executescript(SCHEMA)
+        # Migrate: add pr_url column if missing
+        try:
+            await self._db.execute("ALTER TABLE workers ADD COLUMN pr_url TEXT DEFAULT ''")
+            await self._db.commit()
+        except Exception:
+            pass  # column already exists
         await self._db.commit()
 
     async def close(self) -> None:
@@ -64,8 +71,8 @@ class StateStore:
             """\
             INSERT INTO workers
                 (issue_key, project_key, worktree_path, branch_name, status,
-                 pid, session_id, attempt, started_at, finished_at, output, error)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 pid, session_id, attempt, started_at, finished_at, output, error, pr_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(issue_key) DO UPDATE SET
                 project_key=excluded.project_key,
                 worktree_path=excluded.worktree_path,
@@ -77,7 +84,8 @@ class StateStore:
                 started_at=excluded.started_at,
                 finished_at=excluded.finished_at,
                 output=excluded.output,
-                error=excluded.error
+                error=excluded.error,
+                pr_url=excluded.pr_url
             """,
             (
                 w.issue_key,
@@ -92,6 +100,7 @@ class StateStore:
                 w.finished_at.isoformat() if w.finished_at else None,
                 w.output,
                 w.error,
+                w.pr_url,
             ),
         )
         await self._db.commit()
@@ -161,4 +170,5 @@ class StateStore:
             finished_at=datetime.fromisoformat(row[9]) if row[9] else None,
             output=row[10] or "",
             error=row[11] or "",
+            pr_url=row[12] if len(row) > 12 else "",
         )

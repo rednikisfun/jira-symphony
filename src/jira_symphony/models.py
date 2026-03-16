@@ -58,6 +58,7 @@ class Worker:
     finished_at: datetime | None = None
     output: str = ""
     error: str = ""
+    pr_url: str = ""
 
 
 @dataclass
