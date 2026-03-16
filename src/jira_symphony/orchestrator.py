@@ -273,10 +273,6 @@ class Orchestrator:
             prompt = self.renderer.render(issue)
 
             await self.jira.transition_issue(issue.key, project.transition_id)
-            await self.jira.add_comment(
-                issue.key,
-                f"Symphony agent started. Branch: `{branch}` | Project: {project_key}",
-            )
 
             cw = ClaudeWorker(worker, project, self.config.claude, prompt)
             await cw.start()
@@ -355,11 +351,6 @@ class Orchestrator:
             log.info(
                 "%s: retrying in %ds (attempt %d/%d)",
                 w.issue_key, backoff, w.attempt + 1, max_attempts,
-            )
-            await self.jira.add_comment(
-                w.issue_key,
-                f"Symphony: attempt {w.attempt} failed. Retrying in {backoff}s.\n"
-                f"Error: {w.error[:300]}",
             )
             await asyncio.sleep(backoff)
 
