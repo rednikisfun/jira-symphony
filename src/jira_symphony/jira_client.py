@@ -7,6 +7,8 @@ import logging
 
 import httpx
 
+import re
+
 from .config import SymphonyConfig
 from .models import JiraIssue, _extract_text as _extract_comment_text
 
@@ -113,20 +115,9 @@ class JiraClient:
         resp.raise_for_status()
 
     async def add_comment(self, issue_key: str, body_text: str) -> None:
-        """Add an ADF comment to an issue."""
+        """Add an ADF comment to an issue. Converts markdown-like text to ADF."""
         url = f"{self._base}/issue/{issue_key}/comment"
-        adf_body = {
-            "body": {
-                "type": "doc",
-                "version": 1,
-                "content": [
-                    {
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": body_text}],
-                    }
-                ],
-            }
-        }
+        adf_body = {"body": _text_to_adf(body_text)}
         log.info("Commenting on %s", issue_key)
         resp = await self._client.post(url, json=adf_body)
         resp.raise_for_status()
@@ -144,3 +135,100 @@ class JiraClient:
         resp = await self._client.get(url)
         resp.raise_for_status()
         return resp.json()
+
+
+_LINK_RE = re.compile(r"(https?://\S+)")
+_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+_CODE_RE = re.compile(r"`([^`]+)`")
+
+
+def _text_to_adf(text: str) -> dict:
+    """Convert markdown-like text to Atlassian Document Format."""
+    lines = text.split("\n")
+    content: list[dict] = []
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
+        # Headings
+        if line.startswith("### "):
+            content.append({
+                "type": "heading", "attrs": {"level": 3},
+                "content": _inline_nodes(line[4:]),
+            })
+        elif line.startswith("## "):
+            content.append({
+                "type": "heading", "attrs": {"level": 2},
+                "content": _inline_nodes(line[3:]),
+            })
+        elif line.startswith("# "):
+            content.append({
+                "type": "heading", "attrs": {"level": 1},
+                "content": _inline_nodes(line[2:]),
+            })
+        # Bullet list items — collect consecutive
+        elif line.startswith("- "):
+            items = []
+            while i < len(lines) and lines[i].startswith("- "):
+                items.append({
+                    "type": "listItem",
+                    "content": [{"type": "paragraph", "content": _inline_nodes(lines[i][2:])}],
+                })
+                i += 1
+            content.append({"type": "bulletList", "content": items})
+            continue
+        # Empty line — skip
+        elif not line.strip():
+            pass
+        # Regular paragraph
+        else:
+            content.append({
+                "type": "paragraph",
+                "content": _inline_nodes(line),
+            })
+        i += 1
+
+    if not content:
+        content.append({"type": "paragraph", "content": [{"type": "text", "text": " "}]})
+
+    return {"type": "doc", "version": 1, "content": content}
+
+
+def _inline_nodes(text: str) -> list[dict]:
+    """Parse inline markdown (bold, code, links) into ADF inline nodes."""
+    nodes: list[dict] = []
+    # Split by bold, code, and links
+    pattern = re.compile(r"(\*\*(.+?)\*\*|`([^`]+)`|(https?://\S+))")
+    last = 0
+    for m in pattern.finditer(text):
+        # Plain text before match
+        if m.start() > last:
+            nodes.append({"type": "text", "text": text[last:m.start()]})
+
+        if m.group(2):  # bold
+            nodes.append({
+                "type": "text", "text": m.group(2),
+                "marks": [{"type": "strong"}],
+            })
+        elif m.group(3):  # code
+            nodes.append({
+                "type": "text", "text": m.group(3),
+                "marks": [{"type": "code"}],
+            })
+        elif m.group(4):  # link
+            url = m.group(4)
+            nodes.append({
+                "type": "text", "text": url,
+                "marks": [{"type": "link", "attrs": {"href": url}}],
+            })
+        last = m.end()
+
+    # Remaining text
+    if last < len(text):
+        nodes.append({"type": "text", "text": text[last:]})
+
+    if not nodes:
+        nodes.append({"type": "text", "text": " "})
+
+    return nodes
