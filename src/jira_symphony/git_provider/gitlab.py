@@ -49,6 +49,20 @@ class GitLabProvider:
             source_branch, target_branch, remote,
         )
         resp = await self._client.post(url, json=body)
+
+        if resp.status_code == 409:
+            # MR already exists — find it
+            log.info("MR already exists for %s, looking it up", source_branch)
+            existing = await self._client.get(
+                url, params={"source_branch": source_branch, "state": "opened"}
+            )
+            existing.raise_for_status()
+            mrs = existing.json()
+            if mrs:
+                mr_url = mrs[0]["web_url"]
+                log.info("Found existing MR: %s", mr_url)
+                return mr_url
+
         resp.raise_for_status()
         mr_url = resp.json()["web_url"]
         log.info("MR created: %s", mr_url)

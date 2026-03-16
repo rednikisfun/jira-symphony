@@ -80,7 +80,8 @@ async def cleanup_worktree(project_path: str, worktree_path: str) -> None:
 async def push_branch(project_path: str, branch: str) -> bool:
     """Push branch to origin. Returns True on success."""
     log.info("Pushing branch %s", branch)
-    rc, _, err = await _git("push", "--force-with-lease", "origin", branch, cwd=project_path)
+    # Force push — worktree branches always start fresh from origin/main
+    rc, _, err = await _git("push", "--force", "origin", branch, cwd=project_path)
     if rc != 0:
         log.error("Push failed: %s", err)
         return False
