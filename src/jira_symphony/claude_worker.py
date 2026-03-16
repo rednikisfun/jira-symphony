@@ -105,12 +105,14 @@ class ClaudeWorker:
         )
 
         # Safe subprocess — uses create_subprocess_exec, not shell
+        # Stream-json events can exceed the default 64KB line limit
         self._proc = await asyncio.create_subprocess_exec(
             *cmd_args,
             cwd=w.worktree_path,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            limit=10 * 1024 * 1024,  # 10MB line buffer
         )
 
         self._proc.stdin.write(self._prompt.encode())
