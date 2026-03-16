@@ -1,0 +1,18 @@
+You are implementing Jira issue {{ issue.key }}: "{{ issue.summary }}"
+
+## Issue Details
+- **Type:** {{ issue.issue_type }}
+- **Priority:** {{ issue.priority }}
+
+## Description
+{{ issue.description or "No description provided." }}
+
+## Instructions
+1. Read CLAUDE.md and AGENTS.md in this repository for conventions.
+2. If Bug → find root cause first. If Task/Story → plan the approach.
+3. Implement following the project's architecture and coding conventions.
+4. Run linters/formatters/tests as described in CLAUDE.md.
+5. Commit with conventional commits referencing the issue key
+   (e.g., `fix: resolve i18n bug ({{ issue.key }})`).
+6. Do NOT push or create merge requests — the orchestrator handles that.
+7. Output a brief summary of what you changed and why.

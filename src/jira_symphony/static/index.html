@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jira Symphony</title>
+<style>
+  :root {
+    --bg: #0a0b10; --surface: #13141c; --surface2: #1c1e2a;
+    --border: #262940; --text: #e4e7f0; --text2: #7c819a;
+    --accent: #7c6cf0; --accent2: #9d8ff7;
+    --green: #34d399; --red: #f87171; --yellow: #fbbf24; --blue: #60a5fa;
+    --radius: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .layout { max-width: 1400px; margin: 0 auto; padding: 20px 24px; }
+
+  /* ── Header ── */
+  header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; margin-bottom: 24px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  .logo h1 span { color: var(--accent); }
+  .logo .version { font-size: 11px; color: var(--text2); background: var(--surface2); padding: 2px 8px; border-radius: 4px; }
+  .header-controls { display: flex; gap: 10px; align-items: center; }
+  .header-controls a { color: var(--text2); text-decoration: none; font-size: 13px; padding: 6px 12px; border-radius: 6px; transition: all 0.15s; }
+  .header-controls a:hover { color: var(--text); background: var(--surface2); }
+  .status-text { font-size: 12px; color: var(--text2); margin-right: 8px; }
+  button { padding: 7px 14px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface2); color: var(--text); cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+  button:hover { background: var(--border); }
+  button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── Dispatch Bar ── */
+  .dispatch-bar { display: flex; gap: 10px; margin-bottom: 24px; padding: 14px 18px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); align-items: center; }
+  .dispatch-bar label { font-size: 13px; font-weight: 500; white-space: nowrap; color: var(--text2); }
+  .dispatch-bar input, .dispatch-bar select { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 13px; outline: none; }
+  .dispatch-bar input:focus, .dispatch-bar select:focus { border-color: var(--accent); }
+  .dispatch-bar input { flex: 1; min-width: 140px; max-width: 220px; }
+  .dispatch-bar select { min-width: 160px; }
+  .dispatch-bar button { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .dispatch-bar button:hover { background: var(--accent2); }
+  .dispatch-msg { font-size: 12px; margin-left: 6px; }
+  .dispatch-msg.ok { color: var(--green); }
+  .dispatch-msg.err { color: var(--red); }
+
+  /* ── Stats ── */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat { padding: 14px 18px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); }
+  .stat .label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
+  .stat .value { font-size: 26px; font-weight: 700; margin-top: 2px; }
+  .stat .value.green { color: var(--green); }
+  .stat .value.red { color: var(--red); }
+  .stat .value.blue { color: var(--blue); }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 2px; margin-bottom: 18px; background: var(--surface); border-radius: 8px; padding: 3px; width: fit-content; }
+  .tab { padding: 7px 16px; border-radius: 6px; background: transparent; border: none; color: var(--text2); cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+  .tab.active { background: var(--surface2); color: var(--text); }
+
+  /* ── Worker cards ── */
+  .workers { display: flex; flex-direction: column; gap: 10px; }
+  .worker-card { padding: 16px 20px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); transition: border-color 0.15s; }
+  .worker-card:hover { border-color: var(--accent); }
+  .worker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .worker-title { display: flex; align-items: center; gap: 10px; }
+  .worker-title strong { font-size: 15px; font-weight: 600; }
+  .project-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: var(--surface2); color: var(--text2); font-weight: 500; }
+  .worker-actions { display: flex; gap: 6px; }
+  .worker-actions button { padding: 4px 10px; font-size: 12px; }
+  .worker-actions .kill { border-color: var(--red); color: var(--red); }
+  .worker-actions .kill:hover { background: var(--red); color: #fff; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+  .badge.running { background: rgba(52,211,153,0.12); color: var(--green); }
+  .badge.completed { background: rgba(96,165,250,0.12); color: var(--blue); }
+  .badge.failed { background: rgba(248,113,113,0.12); color: var(--red); }
+  .badge.timed_out { background: rgba(251,191,36,0.12); color: var(--yellow); }
+  .badge.pending { background: rgba(124,129,154,0.12); color: var(--text2); }
+
+  .worker-progress { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; font-size: 13px; }
+  .worker-progress .row { display: flex; gap: 8px; }
+  .worker-progress .lbl { color: var(--text2); min-width: 80px; }
+  .worker-progress .val { color: var(--text); word-break: break-all; }
+  .activity { color: var(--accent) !important; font-weight: 500; }
+
+  .files-list { margin-top: 10px; padding: 10px 14px; background: var(--bg); border-radius: 8px; font-size: 12px; font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace; max-height: 120px; overflow-y: auto; }
+  .files-list div { padding: 1px 0; color: var(--text2); }
+
+  .log-panel { margin-top: 10px; padding: 12px 14px; background: var(--bg); border-radius: 8px; font-size: 12px; font-family: 'JetBrains Mono', 'SF Mono', monospace; max-height: 300px; overflow-y: auto; line-height: 1.6; }
+  .log-panel div { color: var(--text2); white-space: pre-wrap; word-break: break-all; }
+  .log-toggle { margin-top: 8px; font-size: 12px; color: var(--accent); cursor: pointer; background: none; border: none; padding: 0; font-weight: 500; }
+
+  /* ── History ── */
+  .history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .history-table th { text-align: left; padding: 10px 12px; color: var(--text2); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+  .history-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+
+  .empty { text-align: center; padding: 48px 20px; color: var(--text2); }
+  .empty p { font-size: 14px; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <header>
+    <div class="logo">
+      <h1><span>Jira</span> Symphony</h1>
+      <span class="version">v0.2</span>
+    </div>
+    <div class="header-controls">
+      <span id="status-indicator" class="status-text"></span>
+      <a href="/setup">Setup</a>
+      <button id="btn-pause" onclick="togglePause()">Pause</button>
+    </div>
+  </header>
+
+  <div class="dispatch-bar">
+    <label>Dispatch</label>
+    <input type="text" id="dispatch-key" placeholder="STCH-1234">
+    <select id="dispatch-project"><option value="">Auto-route</option></select>
+    <button onclick="dispatchIssue()">Send</button>
+    <span id="dispatch-msg" class="dispatch-msg"></span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="label">Active Workers</div><div class="value blue" id="stat-active">0</div></div>
+    <div class="stat"><div class="label">Dispatched</div><div class="value" id="stat-dispatched">0</div></div>
+    <div class="stat"><div class="label">Completed</div><div class="value green" id="stat-completed">0</div></div>
+    <div class="stat"><div class="label">Failed</div><div class="value red" id="stat-failed">0</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('active')">Active Workers</button>
+    <button class="tab" onclick="switchTab('history')">History</button>
+  </div>
+
+  <div id="tab-active" class="workers"></div>
+  <div id="tab-history" style="display:none"></div>
+</div>
+
+<script>
+let currentTab = 'active';
+let expandedLogs = new Set();
+let isPaused = false;
+let projectsPopulated = false;
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : s || ''; }
+
+const evtSource = new EventSource('/api/events');
+evtSource.onmessage = (e) => { updateDashboard(JSON.parse(e.data)); };
+evtSource.onerror = () => {
+  document.getElementById('status-indicator').textContent = 'Disconnected';
+};
+
+function updateDashboard(data) {
+  isPaused = data.paused;
+  const btn = document.getElementById('btn-pause');
+  btn.textContent = isPaused ? 'Resume' : 'Pause';
+  if (isPaused) btn.classList.add('active'); else btn.classList.remove('active');
+
+  const lastPoll = data.last_poll_at ? new Date(data.last_poll_at).toLocaleTimeString() : '\u2014';
+  document.getElementById('status-indicator').textContent =
+    isPaused ? 'Paused' : 'Poll: ' + lastPoll;
+
+  document.getElementById('stat-active').textContent = data.active_workers;
+  document.getElementById('stat-dispatched').textContent = data.total_dispatched;
+  document.getElementById('stat-completed').textContent = data.total_completed;
+  document.getElementById('stat-failed').textContent = data.total_failed;
+
+  // Populate project dropdown once
+  if (!projectsPopulated && data.projects && data.projects.length) {
+    const sel = document.getElementById('dispatch-project');
+    data.projects.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = p.name;
+      sel.appendChild(opt);
+    });
+    projectsPopulated = true;
+  }
+
+  if (currentTab === 'active') renderWorkers(data.workers);
+}
+
+function renderWorkers(workers) {
+  const container = document.getElementById('tab-active');
+  container.replaceChildren();
+
+  if (!workers.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.appendChild(Object.assign(document.createElement('p'), { textContent: 'No active workers. Waiting for issues...' }));
+    container.appendChild(empty);
+    return;
+  }
+
+  workers.forEach(w => {
+    const p = w.progress || {};
+    const card = document.createElement('div');
+    card.className = 'worker-card';
+
+    const header = document.createElement('div');
+    header.className = 'worker-header';
+    const title = document.createElement('div');
+    title.className = 'worker-title';
+    const issueEl = document.createElement('strong');
+    issueEl.textContent = w.issue;
+    const projEl = document.createElement('span');
+    projEl.className = 'project-badge';
+    projEl.textContent = w.project;
+    const badgeEl = document.createElement('span');
+    badgeEl.className = 'badge ' + w.status;
+    badgeEl.textContent = w.status;
+    title.append(issueEl, projEl, badgeEl);
+
+    const actions = document.createElement('div');
+    actions.className = 'worker-actions';
+    const sessionBtn = document.createElement('button');
+    sessionBtn.textContent = 'Session';
+    sessionBtn.addEventListener('click', () => {
+      const cmd = 'cd ' + w.worktree + ' && claude --session-id ' + w.session_id + ' --continue';
+      navigator.clipboard.writeText(cmd);
+      sessionBtn.textContent = 'Copied!';
+      setTimeout(() => { sessionBtn.textContent = 'Session'; }, 1500);
+    });
+    const killBtn = document.createElement('button');
+    killBtn.className = 'kill';
+    killBtn.textContent = 'Kill';
+    killBtn.addEventListener('click', async () => {
+      if (confirm('Kill worker ' + w.issue + '?')) {
+        await fetch('/api/workers/' + encodeURIComponent(w.issue) + '/kill', { method: 'POST' });
+      }
+    });
+    actions.append(sessionBtn, killBtn);
+    header.append(title, actions);
+
+    const grid = document.createElement('div');
+    grid.className = 'worker-progress';
+    const rows = [
+      ['Activity', p.current_activity || '\u2014', true],
+      ['Elapsed', w.elapsed, false],
+      ['Tool', p.current_tool || '\u2014', false],
+      ['Attempt', String(w.attempt), false],
+      ['Messages', String(p.message_count || 0), false],
+      ['Tools used', String(p.tool_use_count || 0), false],
+      ['Cost', '$' + (p.cost_usd || 0).toFixed(4), false],
+      ['Branch', w.branch, false],
+    ];
+    rows.forEach(([label, val, isActivity]) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const lbl = document.createElement('span');
+      lbl.className = 'lbl';
+      lbl.textContent = label;
+      const v = document.createElement('span');
+      v.className = isActivity ? 'val activity' : 'val';
+      v.textContent = val;
+      row.append(lbl, v);
+      grid.appendChild(row);
+    });
+
+    const files = p.files_touched || [];
+    let filesEl = null;
+    if (files.length) {
+      filesEl = document.createElement('div');
+      filesEl.className = 'files-list';
+      files.slice(-20).forEach(f => {
+        const d = document.createElement('div');
+        d.textContent = f;
+        filesEl.appendChild(d);
+      });
+    }
+
+    const showLog = expandedLogs.has(w.issue);
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'log-toggle';
+    toggleBtn.textContent = (showLog ? 'Hide' : 'Show') + ' stream log';
+    toggleBtn.addEventListener('click', () => {
+      if (expandedLogs.has(w.issue)) expandedLogs.delete(w.issue);
+      else expandedLogs.add(w.issue);
+    });
+
+    card.append(header, grid);
+    if (filesEl) card.appendChild(filesEl);
+    card.appendChild(toggleBtn);
+
+    if (showLog) {
+      const logPanel = document.createElement('div');
+      logPanel.className = 'log-panel';
+      (p.log_tail || []).forEach(line => {
+        const d = document.createElement('div');
+        d.textContent = truncate(line, 200);
+        logPanel.appendChild(d);
+      });
+      card.appendChild(logPanel);
+      requestAnimationFrame(() => { logPanel.scrollTop = logPanel.scrollHeight; });
+    }
+
+    container.appendChild(card);
+  });
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.textContent.toLowerCase().includes(tab === 'active' ? 'active' : 'history'))
+      t.classList.add('active');
+  });
+  document.getElementById('tab-active').style.display = tab === 'active' ? '' : 'none';
+  document.getElementById('tab-history').style.display = tab === 'history' ? '' : 'none';
+  if (tab === 'history') loadHistory();
+}
+
+async function loadHistory() {
+  const res = await fetch('/api/history');
+  const data = await res.json();
+  const el = document.getElementById('tab-history');
+  el.replaceChildren();
+
+  if (!data.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.appendChild(Object.assign(document.createElement('p'), { textContent: 'No history yet.' }));
+    el.appendChild(empty);
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'history-table';
+  const headRow = document.createElement('tr');
+  ['Issue', 'Project', 'Status', 'Attempt', 'Started', 'Finished', 'Actions'].forEach(h => {
+    const th = document.createElement('th');
+    th.textContent = h;
+    headRow.appendChild(th);
+  });
+  table.appendChild(headRow);
+
+  data.forEach(w => {
+    const tr = document.createElement('tr');
+    const cells = [
+      w.issue, w.project, null, String(w.attempt),
+      w.started_at ? new Date(w.started_at).toLocaleString() : '\u2014',
+      w.finished_at ? new Date(w.finished_at).toLocaleString() : '\u2014',
+      null,
+    ];
+    cells.forEach((val, i) => {
+      const td = document.createElement('td');
+      if (i === 0) { const b = document.createElement('strong'); b.textContent = val; td.appendChild(b); }
+      else if (i === 2) { const s = document.createElement('span'); s.className = 'badge ' + w.status; s.textContent = w.status; td.appendChild(s); }
+      else if (i === 6) {
+        const btn = document.createElement('button');
+        btn.textContent = 'Retry';
+        btn.style.cssText = 'padding:3px 10px;font-size:11px';
+        btn.addEventListener('click', async () => {
+          await fetch('/api/workers/' + encodeURIComponent(w.issue) + '/retry', { method: 'POST' });
+          btn.textContent = 'Queued';
+          setTimeout(() => { btn.textContent = 'Retry'; }, 2000);
+        });
+        td.appendChild(btn);
+      }
+      else { td.textContent = val; }
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+  el.appendChild(table);
+}
+
+async function togglePause() {
+  await fetch(isPaused ? '/api/orchestrator/resume' : '/api/orchestrator/pause', { method: 'POST' });
+}
+
+async function dispatchIssue() {
+  const keyEl = document.getElementById('dispatch-key');
+  const projEl = document.getElementById('dispatch-project');
+  const msgEl = document.getElementById('dispatch-msg');
+  const key = keyEl.value.trim();
+  if (!key) { msgEl.textContent = 'Enter issue key'; msgEl.className = 'dispatch-msg err'; return; }
+
+  try {
+    const body = { issue_key: key };
+    if (projEl.value) body.project = projEl.value;
+    const resp = await fetch('/api/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await resp.json();
+    msgEl.textContent = data.message || 'Dispatched';
+    msgEl.className = 'dispatch-msg ' + (data.ok ? 'ok' : 'err');
+    if (data.ok) keyEl.value = '';
+  } catch (e) {
+    msgEl.textContent = 'Failed to dispatch';
+    msgEl.className = 'dispatch-msg err';
+  }
+  setTimeout(() => { msgEl.textContent = ''; }, 4000);
+}
+</script>
+</body>
+</html>

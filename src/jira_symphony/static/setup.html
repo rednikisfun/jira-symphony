@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jira Symphony - Setup</title>
+<style>
+  :root {
+    --bg: #0a0b10; --surface: #13141c; --surface2: #1c1e2a;
+    --border: #262940; --text: #e4e7f0; --text2: #7c819a;
+    --accent: #7c6cf0; --accent2: #9d8ff7;
+    --green: #34d399; --red: #f87171;
+    --radius: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; justify-content: center; padding: 40px 20px; }
+
+  .wizard { max-width: 640px; width: 100%; }
+  .wizard h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+  .wizard h1 span { color: var(--accent); }
+  .wizard .subtitle { color: var(--text2); font-size: 14px; margin-bottom: 32px; }
+
+  .steps { display: flex; gap: 4px; margin-bottom: 32px; }
+  .step-dot { flex: 1; height: 3px; border-radius: 2px; background: var(--border); transition: background 0.3s; }
+  .step-dot.active { background: var(--accent); }
+  .step-dot.done { background: var(--green); }
+
+  .section { display: none; }
+  .section.active { display: block; }
+  .section h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .section .desc { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; color: var(--text2); }
+  .field input, .field select { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text); font-size: 13px; outline: none; }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field .hint { font-size: 11px; color: var(--text2); margin-top: 3px; }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .actions { display: flex; justify-content: space-between; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .btn { padding: 9px 20px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface2); color: var(--text); cursor: pointer; font-size: 13px; font-weight: 500; }
+  .btn:hover { background: var(--border); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .test-result { font-size: 13px; margin-top: 10px; padding: 8px 12px; border-radius: 6px; display: none; }
+  .test-result.ok { display: block; background: rgba(52,211,153,0.1); color: var(--green); }
+  .test-result.err { display: block; background: rgba(248,113,113,0.1); color: var(--red); }
+
+  .project-list { margin-bottom: 16px; }
+  .project-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; margin-bottom: 6px; }
+  .project-item .info .name { font-weight: 500; font-size: 14px; }
+  .project-item .info .detail { font-size: 12px; color: var(--text2); }
+  .project-item button { padding: 3px 10px; font-size: 11px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--red); cursor: pointer; }
+
+  .success-panel { text-align: center; padding: 40px 20px; }
+  .success-panel h2 { color: var(--green); margin-bottom: 12px; }
+  .success-panel p { color: var(--text2); font-size: 14px; margin-bottom: 8px; }
+  .success-panel code { background: var(--surface2); padding: 3px 8px; border-radius: 4px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wizard">
+  <h1><span>Jira</span> Symphony Setup</h1>
+  <p class="subtitle">Configure your orchestrator in a few steps</p>
+
+  <div class="steps" id="step-dots"></div>
+
+  <!-- Step 1: Jira -->
+  <div class="section active" id="step-1">
+    <h2>Jira Connection</h2>
+    <p class="desc">Connect to your Jira Cloud instance</p>
+    <div class="field">
+      <label>Site</label>
+      <input type="text" id="jira-site" placeholder="myorg.atlassian.net">
+    </div>
+    <div class="field">
+      <label>Cloud ID</label>
+      <input type="text" id="jira-cloud-id" placeholder="3c87d90a-...">
+      <div class="hint">Find at: myorg.atlassian.net/_edge/tenant_info</div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="jira-email" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label>API Token</label>
+        <input type="password" id="jira-token" placeholder="ATATT3x...">
+      </div>
+    </div>
+    <button class="btn" onclick="testJira()">Test Connection</button>
+    <div class="test-result" id="jira-test"></div>
+  </div>
+
+  <!-- Step 2: Filters -->
+  <div class="section" id="step-2">
+    <h2>JQL Filters</h2>
+    <p class="desc">Configure which issues to poll</p>
+    <div class="field-row">
+      <div class="field">
+        <label>Project Key</label>
+        <input type="text" id="jira-project" placeholder="PROJ">
+      </div>
+      <div class="field">
+        <label>Poll Interval (sec)</label>
+        <input type="number" id="jira-poll" value="30" min="10">
+      </div>
+    </div>
+    <div class="field">
+      <label>Statuses (comma-separated)</label>
+      <input type="text" id="jira-statuses" value="К выполнению, Front">
+    </div>
+    <div class="field">
+      <label>Reporter Account IDs (comma-separated, optional)</label>
+      <input type="text" id="jira-reporters" placeholder="">
+    </div>
+    <div class="field">
+      <label>Assignee Account IDs (comma-separated, optional)</label>
+      <input type="text" id="jira-assignees" placeholder="">
+    </div>
+  </div>
+
+  <!-- Step 3: Transitions -->
+  <div class="section" id="step-3">
+    <h2>Jira Transitions</h2>
+    <p class="desc">Transition IDs used to move issues between states</p>
+    <div class="field-row">
+      <div class="field"><label>In Progress</label><input type="text" id="tr-in-progress" value="3"></div>
+      <div class="field"><label>QA</label><input type="text" id="tr-qa" value="6"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Done</label><input type="text" id="tr-done" value="13"></div>
+      <div class="field"><label>To Do</label><input type="text" id="tr-to-do" value="11"></div>
+    </div>
+  </div>
+
+  <!-- Step 4: Git -->
+  <div class="section" id="step-4">
+    <h2>Git Providers</h2>
+    <p class="desc">Configure GitHub and/or GitLab access</p>
+    <div class="field">
+      <label>GitLab Token (optional)</label>
+      <input type="password" id="gitlab-token" placeholder="glpat-...">
+    </div>
+    <div class="field">
+      <label>GitLab Base URL</label>
+      <input type="text" id="gitlab-url" value="https://gitlab.com">
+    </div>
+    <div class="field">
+      <label>GitHub Token (optional)</label>
+      <input type="password" id="github-token" placeholder="ghp_...">
+    </div>
+  </div>
+
+  <!-- Step 5: Claude -->
+  <div class="section" id="step-5">
+    <h2>Claude Settings</h2>
+    <p class="desc">Configure the AI worker</p>
+    <div class="field-row">
+      <div class="field"><label>Max Workers</label><input type="number" id="claude-workers" value="3" min="1" max="10"></div>
+      <div class="field"><label>Model</label><input type="text" id="claude-model" value="opus"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Budget per Task (USD)</label><input type="number" id="claude-budget" value="5.0" step="0.5" min="0.5"></div>
+      <div class="field"><label>Timeout (min)</label><input type="number" id="claude-timeout" value="30" min="5"></div>
+    </div>
+    <div class="field">
+      <label>Max Retry Attempts</label>
+      <input type="number" id="claude-retries" value="2" min="0" max="5">
+    </div>
+  </div>
+
+  <!-- Step 6: Projects -->
+  <div class="section" id="step-6">
+    <h2>Projects</h2>
+    <p class="desc">Add your code repositories</p>
+    <div class="project-list" id="project-list"></div>
+    <div id="project-form">
+      <div class="field"><label>Name</label><input type="text" id="proj-name" placeholder="admin-panel"></div>
+      <div class="field"><label>Local Path</label><input type="text" id="proj-path" placeholder="/path/to/repo"></div>
+      <div class="field"><label>Description</label><input type="text" id="proj-desc" placeholder="Optional description"></div>
+      <div class="field-row">
+        <div class="field"><label>Main Branch</label><input type="text" id="proj-branch" value="main"></div>
+        <div class="field">
+          <label>Git Provider</label>
+          <select id="proj-provider"><option value="gitlab">GitLab</option><option value="github">GitHub</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Remote (owner/repo)</label><input type="text" id="proj-remote" placeholder="org/repo"></div>
+        <div class="field"><label>PR Target Branch</label><input type="text" id="proj-target" value="main"></div>
+      </div>
+      <div class="field"><label>Transition ID</label><input type="text" id="proj-transition" value="3"></div>
+      <button class="btn" onclick="addProject()" style="margin-top:8px">Add Project</button>
+    </div>
+  </div>
+
+  <!-- Step 7: Done -->
+  <div class="section" id="step-7">
+    <div class="success-panel" id="success-panel" style="display:none">
+      <h2>Setup Complete!</h2>
+      <p>Config saved. Start the orchestrator:</p>
+      <p><code>jira-symphony start</code></p>
+      <br>
+      <a href="/" class="btn btn-primary">Go to Dashboard</a>
+    </div>
+    <div id="save-error" class="test-result err" style="display:none"></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn" id="btn-prev" onclick="prevStep()" style="visibility:hidden">Back</button>
+    <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Next</button>
+  </div>
+</div>
+
+<script>
+const TOTAL_STEPS = 7;
+let step = 1;
+let projects = [];
+
+function initDots() {
+  const c = document.getElementById('step-dots');
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
+    const d = document.createElement('div');
+    d.className = 'step-dot' + (i === 1 ? ' active' : '');
+    d.id = 'dot-' + i;
+    c.appendChild(d);
+  }
+}
+initDots();
+
+function updateUI() {
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
+    document.getElementById('step-' + i).classList.toggle('active', i === step);
+    const dot = document.getElementById('dot-' + i);
+    dot.className = 'step-dot' + (i === step ? ' active' : i < step ? ' done' : '');
+  }
+  document.getElementById('btn-prev').style.visibility = step === 1 ? 'hidden' : 'visible';
+  const nextBtn = document.getElementById('btn-next');
+  nextBtn.textContent = step === TOTAL_STEPS ? 'Save & Finish' : 'Next';
+}
+
+function nextStep() {
+  if (step === TOTAL_STEPS) { saveConfig(); return; }
+  if (step < TOTAL_STEPS) { step++; updateUI(); }
+}
+function prevStep() { if (step > 1) { step--; updateUI(); } }
+
+function val(id) { return document.getElementById(id).value.trim(); }
+function csvList(id) { return val(id).split(',').map(s => s.trim()).filter(Boolean); }
+
+async function testJira() {
+  const el = document.getElementById('jira-test');
+  el.className = 'test-result'; el.style.display = 'none';
+  try {
+    const resp = await fetch('/api/setup/validate-jira', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cloud_id: val('jira-cloud-id'), email: val('jira-email'), api_token: val('jira-token') }),
+    });
+    const data = await resp.json();
+    if (data.ok) { el.textContent = 'Connected as: ' + data.user; el.className = 'test-result ok'; }
+    else { el.textContent = 'Error: ' + data.error; el.className = 'test-result err'; }
+  } catch (e) { el.textContent = 'Connection failed'; el.className = 'test-result err'; }
+}
+
+function addProject() {
+  const name = val('proj-name');
+  if (!name) return;
+  projects.push({
+    name, path: val('proj-path'), description: val('proj-desc'),
+    main_branch: val('proj-branch'), git_provider: val('proj-provider'),
+    git_remote: val('proj-remote'), pr_target_branch: val('proj-target'),
+    transition_id: val('proj-transition'), extra_dirs: [],
+  });
+  renderProjects();
+  ['proj-name','proj-path','proj-desc','proj-remote'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('proj-branch').value = 'main';
+  document.getElementById('proj-target').value = 'main';
+  document.getElementById('proj-transition').value = '3';
+}
+
+function removeProject(i) { projects.splice(i, 1); renderProjects(); }
+
+function renderProjects() {
+  const el = document.getElementById('project-list');
+  el.replaceChildren();
+  projects.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'project-item';
+
+    const info = document.createElement('div');
+    info.className = 'info';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'name';
+    nameEl.textContent = p.name;
+    const detailEl = document.createElement('div');
+    detailEl.className = 'detail';
+    detailEl.textContent = p.path + ' \u00b7 ' + p.git_provider;
+    info.append(nameEl, detailEl);
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Remove';
+    btn.addEventListener('click', () => removeProject(i));
+
+    div.append(info, btn);
+    el.appendChild(div);
+  });
+}
+
+async function saveConfig() {
+  const config = {
+    jira: {
+      site: val('jira-site'), cloud_id: val('jira-cloud-id'),
+      email: val('jira-email'), api_token: val('jira-token'),
+      project_key: val('jira-project'),
+      poll_interval_seconds: parseInt(val('jira-poll')) || 30,
+      filters: {
+        statuses: csvList('jira-statuses'),
+        reporter_account_ids: csvList('jira-reporters'),
+        assignee_account_ids: csvList('jira-assignees'),
+      },
+      transitions: {
+        in_progress: val('tr-in-progress'), qa: val('tr-qa'),
+        done: val('tr-done'), to_do: val('tr-to-do'),
+      },
+    },
+    claude: {
+      max_workers: parseInt(val('claude-workers')) || 3,
+      model: val('claude-model') || 'opus',
+      max_budget_usd: parseFloat(val('claude-budget')) || 5.0,
+      timeout_minutes: parseInt(val('claude-timeout')) || 30,
+      max_retry_attempts: parseInt(val('claude-retries')) || 2,
+    },
+    routing: { triage_enabled: true, triage_model: 'sonnet', epic_map: {}, label_map: {} },
+    gitlab: { token: val('gitlab-token'), base_url: val('gitlab-url') || 'https://gitlab.com' },
+    github: { token: val('github-token') },
+    projects: projects,
+  };
+
+  try {
+    const resp = await fetch('/api/setup/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      document.getElementById('success-panel').style.display = 'block';
+      document.getElementById('save-error').style.display = 'none';
+      document.getElementById('btn-next').style.display = 'none';
+      document.getElementById('btn-prev').style.display = 'none';
+    } else {
+      const errEl = document.getElementById('save-error');
+      errEl.textContent = 'Error: ' + data.error;
+      errEl.style.display = 'block';
+    }
+  } catch (e) {
+    const errEl = document.getElementById('save-error');
+    errEl.textContent = 'Failed to save config';
+    errEl.style.display = 'block';
+  }
+}
+</script>
+</body>
+</html>

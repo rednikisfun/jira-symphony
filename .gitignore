@@ -1,0 +1,12 @@
+.env
+config.yaml
+__pycache__/
+*.pyc
+.venv/
+dist/
+*.egg-info/
+symphony.db
+.idea/
+.vscode/
+*.swp
+*.swo
