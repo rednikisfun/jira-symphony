@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import uuid
 from collections import deque
 from dataclasses import dataclass, field
@@ -17,6 +18,9 @@ log = logging.getLogger(__name__)
 
 MAX_LOG_LINES = 200
 
+# Pattern to match remote session URLs from stderr
+_RC_URL_RE = re.compile(r"(https://claude\.ai/code\S+)")
+
 
 def _unique_session_id(issue_key: str, attempt: int) -> str:
     ts = datetime.now().isoformat()
@@ -28,6 +32,7 @@ class WorkerProgress:
     """Real-time progress tracked from stream-json output."""
     current_activity: str = "starting"
     current_tool: str | None = None
+    remote_url: str | None = None
     files_touched: list[str] = field(default_factory=list)
     tools_used: list[str] = field(default_factory=list)
     message_count: int = 0
@@ -40,6 +45,7 @@ class WorkerProgress:
         return {
             "current_activity": self.current_activity,
             "current_tool": self.current_tool,
+            "remote_url": self.remote_url,
             "files_touched": self.files_touched[-20:],
             "tools_used": self.tools_used[-20:],
             "message_count": self.message_count,
@@ -51,7 +57,10 @@ class WorkerProgress:
 
 
 class ClaudeWorker:
-    """Manages a single Claude Code process with real-time progress tracking."""
+    """Manages a single Claude Code process with real-time progress tracking.
+
+    Uses asyncio.create_subprocess_exec (no shell) for safe subprocess spawning.
+    """
 
     def __init__(
         self,
@@ -84,6 +93,7 @@ class ClaudeWorker:
             "--max-budget-usd", str(self._cfg.max_budget_usd),
             "--session-id", w.session_id,
             "--effort", "max",
+            "--rc",
         ]
 
         for extra_dir in self._project.extra_dirs:
@@ -94,6 +104,7 @@ class ClaudeWorker:
             w.issue_key, w.worktree_path, w.attempt,
         )
 
+        # Safe subprocess — uses create_subprocess_exec, not shell
         self._proc = await asyncio.create_subprocess_exec(
             *cmd_args,
             cwd=w.worktree_path,
@@ -125,6 +136,15 @@ class ClaudeWorker:
                     self._stderr_buf.append(line)
                     if len(self._stderr_buf) > 100:
                         self._stderr_buf = self._stderr_buf[-100:]
+                    # Extract remote control URL
+                    if not self.progress.remote_url:
+                        m = _RC_URL_RE.search(line)
+                        if m:
+                            self.progress.remote_url = m.group(1)
+                            log.info(
+                                "%s: remote session: %s",
+                                w.issue_key, self.progress.remote_url,
+                            )
 
         async def _read_stdout() -> None:
             assert self._proc.stdout is not None

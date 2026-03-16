@@ -68,6 +68,8 @@
   .project-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: var(--surface2); color: var(--text2); font-weight: 500; }
   .worker-actions { display: flex; gap: 6px; }
   .worker-actions button { padding: 4px 10px; font-size: 12px; }
+  .rc-link { padding: 4px 10px; font-size: 12px; border: 1px solid var(--accent); border-radius: 6px; color: var(--accent); text-decoration: none; font-weight: 500; }
+  .rc-link:hover { background: var(--accent); color: #fff; }
   .worker-actions .kill { border-color: var(--red); color: var(--red); }
   .worker-actions .kill:hover { background: var(--red); color: #fff; }
 
@@ -224,6 +226,14 @@ function renderWorkers(workers) {
 
     const actions = document.createElement('div');
     actions.className = 'worker-actions';
+    if (p.remote_url) {
+      const rcLink = document.createElement('a');
+      rcLink.href = p.remote_url;
+      rcLink.target = '_blank';
+      rcLink.className = 'rc-link';
+      rcLink.textContent = 'Remote';
+      actions.appendChild(rcLink);
+    }
     const sessionBtn = document.createElement('button');
     sessionBtn.textContent = 'Session';
     sessionBtn.addEventListener('click', () => {

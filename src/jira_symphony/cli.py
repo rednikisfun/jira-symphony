@@ -139,12 +139,15 @@ def status(
         console.print("\n[bold]Active Workers:[/bold]")
         for w in data["workers"]:
             p = w.get("progress", {})
-            console.print(
+            line = (
                 f"  {w['issue']} -> {w['project']} "
                 f"[{w['status']}] "
                 f"{w.get('elapsed', '')} "
                 f"| {p.get('current_activity', '')}"
             )
+            console.print(line)
+            if p.get("remote_url"):
+                console.print(f"    [link={p['remote_url']}]{p['remote_url']}[/link]")
 
 
 @app.command()
