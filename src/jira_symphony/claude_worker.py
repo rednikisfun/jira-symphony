@@ -93,7 +93,6 @@ class ClaudeWorker:
             "--max-budget-usd", str(self._cfg.max_budget_usd),
             "--session-id", w.session_id,
             "--effort", "max",
-            "rc",
         ]
 
         for extra_dir in self._project.extra_dirs:
