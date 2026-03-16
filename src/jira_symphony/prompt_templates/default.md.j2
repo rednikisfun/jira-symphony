@@ -8,7 +8,7 @@ You are implementing Jira issue {{ issue.key }}: "{{ issue.summary }}"
 {{ issue.description or "No description provided." }}
 
 ## Important
-- The page editor is `turbolink_editor/` — NOT `grapesjs_editor/` (deprecated).
+- The page editor is `turbolink_editor/` (TypeScript/Vite). NEVER read or modify files in `grapesjs_editor/` — it is deprecated and unused. If the issue mentions "editor", it means `turbolink_editor/`.
 
 ## Instructions
 1. Read CLAUDE.md and AGENTS.md in this repository for conventions.
