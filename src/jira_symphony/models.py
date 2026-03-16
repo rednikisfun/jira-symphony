@@ -26,6 +26,7 @@ class JiraIssue:
     parent_key: str | None  # epic parent
     reporter_id: str
     assignee_id: str
+    comments: list[str] = field(default_factory=list)
 
     @classmethod
     def from_api(cls, data: dict) -> JiraIssue:

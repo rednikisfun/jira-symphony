@@ -8,7 +8,7 @@ import logging
 import httpx
 
 from .config import SymphonyConfig
-from .models import JiraIssue
+from .models import JiraIssue, _extract_text as _extract_comment_text
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +68,10 @@ class JiraClient:
 
         issues = [JiraIssue.from_api(raw) for raw in data.get("issues", [])]
         log.info("Polled %d To Do issues", len(issues))
+
+        for issue in issues:
+            issue.comments = await self._fetch_comments(issue.key)
+
         return issues
 
     async def get_issue(self, issue_key: str) -> JiraIssue:
@@ -78,7 +82,27 @@ class JiraClient:
         }
         resp = await self._client.get(url, params=params)
         resp.raise_for_status()
-        return JiraIssue.from_api(resp.json())
+        issue = JiraIssue.from_api(resp.json())
+        issue.comments = await self._fetch_comments(issue_key)
+        return issue
+
+    async def _fetch_comments(self, issue_key: str) -> list[str]:
+        """Fetch comment bodies for an issue."""
+        url = f"{self._base}/issue/{issue_key}/comment"
+        try:
+            resp = await self._client.get(url, params={"maxResults": 20, "orderBy": "-created"})
+            resp.raise_for_status()
+            data = resp.json()
+            comments = []
+            for c in data.get("comments", []):
+                body = c.get("body")
+                text = _extract_comment_text(body)
+                if text:
+                    comments.append(text)
+            return comments
+        except Exception:
+            log.warning("Failed to fetch comments for %s", issue_key)
+            return []
 
     async def transition_issue(self, issue_key: str, transition_id: str) -> None:
         """Transition an issue to a new status."""
