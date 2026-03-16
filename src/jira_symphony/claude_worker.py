@@ -18,8 +18,9 @@ log = logging.getLogger(__name__)
 MAX_LOG_LINES = 200
 
 
-def _deterministic_session_id(issue_key: str, attempt: int) -> str:
-    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"symphony:{issue_key}:{attempt}"))
+def _unique_session_id(issue_key: str, attempt: int) -> str:
+    ts = datetime.now().isoformat()
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"symphony:{issue_key}:{attempt}:{ts}"))
 
 
 @dataclass
@@ -71,7 +72,7 @@ class ClaudeWorker:
     async def start(self) -> None:
         """Spawn the Claude Code process and begin streaming output."""
         w = self.worker
-        w.session_id = _deterministic_session_id(w.issue_key, w.attempt)
+        w.session_id = _unique_session_id(w.issue_key, w.attempt)
 
         cmd_args = [
             "claude",

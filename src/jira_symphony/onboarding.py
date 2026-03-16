@@ -56,7 +56,7 @@ def run_wizard() -> SymphonyConfig:
 
     statuses_str = Prompt.ask(
         "Statuses to poll (comma-separated)",
-        default="\u041a \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0438\u044e, Front",
+        default="\u041a \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0438\u044e, Front, \u0442\u0435\u0441\u0442 \u043d\u0435 \u043f\u0440\u043e\u0439\u0434\u0435\u043d",
     )
     statuses = [s.strip() for s in statuses_str.split(",")]
 

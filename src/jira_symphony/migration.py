@@ -127,7 +127,7 @@ def migrate_config(
         email=email,
         api_token=api_token,
         filters=JiraFiltersConfig(
-            statuses=["К выполнению", "Front"],
+            statuses=["К выполнению", "Front", "тест не пройден"],
             reporter_account_ids=reporter_ids,
             assignee_account_ids=assignee_ids,
         ),

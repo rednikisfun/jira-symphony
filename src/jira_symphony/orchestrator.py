@@ -366,15 +366,8 @@ class Orchestrator:
             w.attempt += 1
             w.status = WorkerStatus.PENDING
             if project:
-                prompt = self.renderer.render(
-                    type("Issue", (), {
-                        "key": w.issue_key,
-                        "summary": f"Retry #{w.attempt}",
-                        "description": w.error,
-                        "issue_type": "Task",
-                        "priority": "High",
-                    })()
-                )
+                issue = await self.jira.get_issue(w.issue_key)
+                prompt = self.renderer.render(issue)
                 cw = ClaudeWorker(w, project, self.config.claude, prompt)
                 await cw.start()
                 await self.state.upsert_worker(w)
