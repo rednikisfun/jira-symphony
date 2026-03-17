@@ -7,7 +7,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-from .models import JiraIssue
+from .models import JiraIssue, ProjectConfig
 
 # Resolve template dir from within the installed package
 _PKG_TEMPLATE_DIR = Path(str(resources.files("jira_symphony").joinpath("prompt_templates")))
@@ -23,6 +23,11 @@ class PromptRenderer:
             keep_trailing_newline=True,
         )
 
-    def render(self, issue: JiraIssue, template_name: str = "default.md.j2") -> str:
+    def render(
+        self,
+        issue: JiraIssue,
+        project: ProjectConfig | None = None,
+        template_name: str = "default.md.j2",
+    ) -> str:
         template = self._env.get_template(template_name)
-        return template.render(issue=issue)
+        return template.render(issue=issue, project=project)

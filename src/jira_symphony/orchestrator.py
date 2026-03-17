@@ -271,7 +271,7 @@ class Orchestrator:
                 branch_name=branch,
             )
 
-            prompt = self.renderer.render(issue)
+            prompt = self.renderer.render(issue, project)
 
             await self.jira.transition_issue(issue.key, project.transition_id)
 
@@ -335,9 +335,22 @@ class Orchestrator:
         await self.state.upsert_worker(w)
 
         summary_snippet = w.output if w.output else ""
+
+        # Extract [LABEL:xxx] tags from output and add to Jira
+        import re
+        for label_match in re.finditer(r"\[LABEL:([^\]]+)\]", summary_snippet):
+            label = label_match.group(1).strip()
+            try:
+                await self.jira.add_label(w.issue_key, label)
+                log.info("%s: added label '%s'", w.issue_key, label)
+            except Exception:
+                log.warning("%s: failed to add label '%s'", w.issue_key, label)
+        # Strip label tags from the comment text
+        clean_summary = re.sub(r"\s*\[LABEL:[^\]]+\]", "", summary_snippet).strip()
+
         await self.jira.add_comment(
             w.issue_key,
-            tpl.completion.format(pr_url=pr_url, summary=summary_snippet),
+            tpl.completion.format(pr_url=pr_url, summary=clean_summary),
         )
 
         await self.jira.transition_issue(
@@ -364,7 +377,7 @@ class Orchestrator:
             w.status = WorkerStatus.PENDING
             if project:
                 issue = await self.jira.get_issue(w.issue_key)
-                prompt = self.renderer.render(issue)
+                prompt = self.renderer.render(issue, project)
                 cw = ClaudeWorker(w, project, self.config.claude, prompt)
                 await cw.start()
                 await self.state.upsert_worker(w)

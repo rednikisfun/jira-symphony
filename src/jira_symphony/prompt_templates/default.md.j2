@@ -7,6 +7,9 @@ You are implementing Jira issue {{ issue.key }}: "{{ issue.summary }}"
 ## Issue Details
 - **Type:** {{ issue.issue_type }}
 - **Priority:** {{ issue.priority }}
+{% if project %}
+- **Project:** {{ project.key }} — {{ project.description }}
+{% endif %}
 
 ## Description
 {{ issue.description or "No description provided." }}
@@ -16,6 +19,18 @@ You are implementing Jira issue {{ issue.key }}: "{{ issue.summary }}"
 {% for comment in issue.comments %}
 - {{ comment }}
 {% endfor %}
+{% endif %}
+{% if project and project.key == "analytics" %}
+
+## Analytics API Reference
+The backend API documentation is available as a Postman collection at:
+`/Users/isfun/Dev/Next.js/backend-service-analytics-laravel/postman_collection.json`
+
+Read this file to find the correct API routes, request/response formats, and available endpoints.
+
+If you need an API route that does NOT exist in the Postman collection and cannot implement the feature without it, you MUST:
+1. State clearly in your summary which route is missing and what it should do
+2. Add the label `missing-api-route` to the issue by including this exact line at the END of your summary: `[LABEL:missing-api-route]`
 {% endif %}
 
 ## Instructions
