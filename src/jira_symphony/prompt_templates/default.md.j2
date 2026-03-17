@@ -1,3 +1,7 @@
+CRITICAL RULE: The `grapesjs_editor/` directory is DEPRECATED and DEAD CODE. Do NOT read, search, grep, or modify ANY file inside `grapesjs_editor/`. Ignore it completely as if it does not exist. The active page/content editor is `turbolink_editor/` (TypeScript/Vite). All editor-related work MUST happen in `turbolink_editor/`.
+
+---
+
 You are implementing Jira issue {{ issue.key }}: "{{ issue.summary }}"
 
 ## Issue Details
@@ -13,9 +17,6 @@ You are implementing Jira issue {{ issue.key }}: "{{ issue.summary }}"
 - {{ comment }}
 {% endfor %}
 {% endif %}
-
-## Important
-- The page editor is `turbolink_editor/` (TypeScript/Vite). NEVER read or modify files in `grapesjs_editor/` — it is deprecated and unused. If the issue mentions "editor", it means `turbolink_editor/`.
 
 ## Instructions
 1. Read CLAUDE.md and AGENTS.md in this repository for conventions.
